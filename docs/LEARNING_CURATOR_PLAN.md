@@ -32,7 +32,7 @@ flowchart LR
 
 | Track | Starting point (from your existing quests/guides) | Best formats for this track |
 |---|---|---|
-| **Blender** | UE5 Atelier Phase 3 (Defender rig), 48 Floor 2 lecterns | Hands-on worked examples from Ori's workshop, short videos, checklists |
+| **Blender & 2.5D Art** | UE5 Atelier Phase 3, 48 Floor 2 lecterns, pixel-sheet baking (`bake_ori_pixel_sheet.py`) | **Stardew Valley × Octopath Traveler (HD-2D / 2.5D)** pixel sprites, 2.5D billboards, & small low-poly relic props (heavy 3D models archived/separate) |
 | **Weather** | Ori's storm repertoire (CAPE, helicity, velocity couplets) | Reading (NWS JetStream, SPC), **live storm days as lessons**, quizzes |
 | **Electronics** | Ori's hardware passion (ESP32, sensors) | Free simulators (Wokwi, Falstad) → real builds, schematics |
 | **Mudding mechanics** | UE5 Atelier Phases 1–2 (mud physics, tuning) | Videos + reading, then **implement the real physics in your UE5 sim** |
@@ -122,7 +122,8 @@ Both projects support the Raspberry Pi 5, and `ASTRAL_ARCHIVE_URL` in Ori's `.en
   - **One model in RAM:** Set `OLLAMA_DEEP_MODEL` equal to `OLLAMA_MODEL` (`qwen2.5:3b`) on Pi 5 so Ollama never swaps two models in and out of memory.
 - **Keep `chromadb` off the Pi:** `chromadb` is listed in `requirements.txt` (unused right now) and pulls heavy ARM64 deps (`onnxruntime`, etc.). Keep it skipped on Pi 5 and use SQLite (`ori_memory.db`) unless needed later.
 - **SD card wear & power-loss safety:** Heartbeat ticks write to `ori_memory.db` and Archive writes `database.json`. Enable SQLite `WAL` mode (`journal_mode=WAL`), keep nightly backups, and prefer a USB 3.0 NVMe SSD over microSD for 24/7 writes.
-- **Windows-only paths & Blender:** Leave `BLENDER_PATH` empty on Pi 5 and keep Blender 3D relic generation on the PC (sync finished `.glb`s via `Bossman-samb/astral-archive` + `copy-to-pi.bat`). On Pi 5, Archive runs `athenaeum/server.js` (Node), not `server.ps1`.
+- **Visual & World Direction (Stardew Valley × Octopath Traveler):** Both worlds are moving toward a cohesive **2.5D / HD-2D pixel-art style** (2D sprites, layered 2.5D depth, warm lantern/hearth lighting, tile-based rooms). Most heavy 3D models stay **archived or in separate files**, keeping only lightweight pixel sheets and optional small low-poly relics for the in-modal inspector. This also cuts disk/RAM/bandwidth for **Pi 5** and mobile browsers.
+- **Blender Workshop:** Blender relic/sprite generation stays on the PC; finished 2.5D sprite sheets or lightweight `.glb`s sync to the Pi 5 via `Bossman-samb/astral-archive` and `copy-to-pi.bat`. On Pi 5, leave `BLENDER_PATH` empty and run `athenaeum/server.js` (Node), not `server.ps1`.
 - **Timing & offline LAN:** Keep `TICK_INTERVAL_SECONDS=90` (or `120`) and `OLLAMA_TIMEOUT_SECONDS=300` so ticks don't pile up. Vendor Three.js locally in `athenaeum/public/vendor/` so the 3D Relic Rotator works offline on LAN, and use a static router IP (or `raspberrypi.local`) + Tailscale/Cloudflare Tunnel for HTTPS/PWA on your phone.
 
 ---
@@ -154,7 +155,8 @@ Both projects support the Raspberry Pi 5, and `ASTRAL_ARCHIVE_URL` in Ori's `.en
 - [ ] Blender teach-by-building: Ori's workshop produces worked-example scripts tied to Floor 2 lecterns.
 - [ ] Topic-themed relic rewards pushed to `custom_relic_library.json`.
 
-### Phase F — Visual integration *(Archive repo)*
+### Phase F — Visual integration *(Archive + Ori)*
+- [ ] Unify around **Stardew Valley × Octopath Traveler (2.5D / HD-2D)** visuals: sprite sheets, 2.5D pedestals, warm lighting, and archive/separate heavy 3D world models.
 - [ ] Ori's Desk on Floor 2 shows live suggestions and due reviews.
 - [ ] Pedestal glow tied to review status; quest board shows Ori-curated quests with a distinct seal.
 
