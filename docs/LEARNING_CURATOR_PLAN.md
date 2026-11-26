@@ -97,12 +97,30 @@ No dedicated GPU, so local models run mostly on the **CPU over shared memory**. 
 
 ---
 
+## 3b. Raspberry Pi 5 Deployment & Split-Host Topology
+
+Both projects support the Raspberry Pi 5, and `ASTRAL_ARCHIVE_URL` in Ori's `.env` lets you run them on the same machine or split them across your home network without code changes:
+
+| Setup | Where Ori runs | Where Archive runs | `ASTRAL_ARCHIVE_URL` | Best for |
+|---|---|---|---|---|
+| **1. Both on PC (current)** | Laptop (`:8888`) | Laptop (`:8080`, `server.ps1`) | `http://localhost:8080` | Fast local dev & Blender workshop |
+| **2. Split: Archive on Pi 5, Ori on PC** *(recommended 24/7 study)* | Laptop (`:8888`) | Pi 5 (`:3000`, `server.js` + `systemd`) | `http://raspberrypi.local:3000` | Always-on study game from phone/tablet/PC while Ori keeps 32 GB RAM + Blender 4.5.15 |
+| **3. Both on Pi 5** *(full appliance)* | Pi 5 (`:8888`, `deploy_pi.sh` + `ori.service`) | Pi 5 (`:3000`, `server.js`) | `http://localhost:3000` | 24/7 standalone companion with zero PC power draw |
+
+### Pi 5 constraints & settings
+- **Hardware:** Pi 5 8 GB (4 GB minimum) with **Active Cooler** and 27W USB-C PSU (required so sustained Ollama ticks don't thermal-throttle).
+- **Models on Pi 5:** Use `qwen2.5:3b` (~2.5 GB RAM, ~8–12 tok/s) or `qwen2.5:1.5b` (~1.1 GB RAM, ~18–25 tok/s) for `OLLAMA_MODEL`, and set `OLLAMA_DEEP_MODEL=qwen2.5:3b` (7B/14B models are too slow/heavy for an 8 GB Pi).
+- **Blender Workshop:** Blender relic generation stays on the PC; finished relics still sync to the Pi 5 via `Bossman-samb/astral-archive` (`custom_relic_library.json`) and `copy-to-pi.bat`.
+- **Archive persistence on Pi 5:** Run `athenaeum/server.js` as a `systemd` service with `GET /api/export` + nightly `database.json` backups (see Archive `PROGRESS_GUIDELINE.md` Phase 6).
+
+---
+
 ## 4. Build phases
 
-### Phase A — Fix Ori's brain *(Ori repo)*
-- [ ] Prompt diet: send only the 6–8 tools relevant to current drives; static persona + tools first, dynamic state last (prefix-cache friendly); set `num_ctx` to fit (~8k).
-- [ ] Raise tick interval to 60–120 s; skip the LLM entirely on ticks where drives clearly dictate `rest`.
-- [ ] Two-brain routing: local 3–4B for ticks; Gemini free tier for Scribe, research, Blender code, letters, reflection, with rate-limiting and automatic fallback to local 7–8B / 14B.
+### Phase A — Fix Ori's brain *(Ori repo — Done)*
+- [x] Prompt diet: `agent/tool_selector.py` sends only the 6–8 tools relevant to current drives; static persona + voice rules first, dynamic state last (prefix-cache friendly); shared `OLLAMA_NUM_CTX=8192`.
+- [x] Raised `TICK_INTERVAL_SECONDS=90`; deep-sleep ticks (`energy < 0.15`, no unread letter) skip the LLM entirely.
+- [x] Local two-brain routing: `qwen2.5:3b` for routine ticks; `OLLAMA_DEEP_MODEL=qwen2.5:7b` for letter replies & nightly reflection (auto-falls back to `3b` if `7b` isn't pulled); `ASTRAL_ARCHIVE_URL` configurable. *(Gemini routing remains ready for later.)*
 
 ### Phase B — Spaced repetition *(Archive repo)*
 - [ ] Per-card `easeFactor`, `intervalDays`, `nextReviewAt`, `lapses`, `lastResult` in `database.json` (SM-2).
@@ -130,9 +148,9 @@ No dedicated GPU, so local models run mostly on the **CPU over shared memory**. 
 
 ---
 
-## 5. Open questions (needed before Phase A)
+## 5. Decisions locked in
 
-1. ~~GPU VRAM~~ → answered: Ryzen AI 7 445 / Radeon 840M / 32 GB (see §3).
-2. **Gemini free tier OK** for heavy work? (Free tier data may be used by Google to improve products.) Otherwise: 100% local, slower Blender/Scribe.
-3. **Where does each run?** Both on this PC, or Archive on the Pi 5?
-4. **School subjects:** which subjects and grade/level?
+1. **Hardware:** Ryzen AI 7 445 / Radeon 840M / 32 GB RAM (see §3); optional Pi 5 deployment (see §3b).
+2. **Model mode:** **100% local (Ollama)** for now (`qwen2.5:3b` + `qwen2.5:7b`), until the project is in a good state.
+3. **Host layout:** Configurable via `ASTRAL_ARCHIVE_URL` (same PC or Archive on Pi 5 / another machine).
+4. **School track:** **Cybersecurity undergrad, focusing on fundamentals & certs** (Network+, Security+, ISC2 CC, CySA+/PenTest+; see §1b).
