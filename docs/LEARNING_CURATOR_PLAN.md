@@ -107,11 +107,23 @@ Both projects support the Raspberry Pi 5, and `ASTRAL_ARCHIVE_URL` in Ori's `.en
 | **2. Split: Archive on Pi 5, Ori on PC** *(recommended 24/7 study)* | Laptop (`:8888`) | Pi 5 (`:3000`, `server.js` + `systemd`) | `http://raspberrypi.local:3000` | Always-on study game from phone/tablet/PC while Ori keeps 32 GB RAM + Blender 4.5.15 |
 | **3. Both on Pi 5** *(full appliance)* | Pi 5 (`:8888`, `deploy_pi.sh` + `ori.service`) | Pi 5 (`:3000`, `server.js`) | `http://localhost:3000` | 24/7 standalone companion with zero PC power draw |
 
-### Pi 5 constraints & settings
-- **Hardware:** Pi 5 8 GB (4 GB minimum) with **Active Cooler** and 27W USB-C PSU (required so sustained Ollama ticks don't thermal-throttle).
-- **Models on Pi 5:** Use `qwen2.5:3b` (~2.5 GB RAM, ~8–12 tok/s) or `qwen2.5:1.5b` (~1.1 GB RAM, ~18–25 tok/s) for `OLLAMA_MODEL`, and set `OLLAMA_DEEP_MODEL=qwen2.5:3b` (7B/14B models are too slow/heavy for an 8 GB Pi).
-- **Blender Workshop:** Blender relic generation stays on the PC; finished relics still sync to the Pi 5 via `Bossman-samb/astral-archive` (`custom_relic_library.json`) and `copy-to-pi.bat`.
-- **Archive persistence on Pi 5:** Run `athenaeum/server.js` as a `systemd` service with `GET /api/export` + nightly `database.json` backups (see Archive `PROGRESS_GUIDELINE.md` Phase 6).
+### Pi 5 constraints, space, RAM & porting gotchas
+- **Hardware:** Pi 5 **8 GB** recommended (4 GB minimum) with **Active Cooler** + **27W USB-C PSU**. Sustained Ollama ticks peg all 4 cores; without active cooling the Pi thermal-throttles (2.4 GHz → 1.5 GHz) and without 27W power it can brown out USB/Wi-Fi.
+- **Disk space budget (~12–16 GB total on Pi):**
+  - Ori runtime (`agent/`, `memory/`, `services/`, `config/`, `web/`, `ori_memory.db`): **~15 MB** (excluding `Ori.blend`/`Ori.blend1` ~23.4 MB, which aren't needed on Pi).
+  - Astral Archive active app: **~1.6 MB** (the ~2.19 GB `Oris relic refrences/` archive stays on PC).
+  - Ollama + model weights: **~3–4.5 GB** (`qwen2.5:3b` is ~2.5 GB, `qwen2.5:1.5b` is ~1.1 GB).
+  - 64-bit OS + logs + backups: **~6–9 GB**.
+  - **Target storage:** **32 GB+ Class A2 microSD** minimum, or **64 GB+ / USB 3.0 NVMe SSD** (strongly recommended).
+- **RAM budget (8 GB vs 4 GB):**
+  - OS + Python (`main.py`) + Node (`server.js`): **~1.0–1.3 GB**.
+  - Ollama + `qwen2.5:3b` at `OLLAMA_NUM_CTX=8192`: **~3.0–3.5 GB** (weights + KV cache) → **~4.0–4.8 GB total** (comfortable on 8 GB).
+  - **On a 4 GB Pi:** `qwen2.5:3b` at 8k context will swap/OOM. Drop to `qwen2.5:1.5b` (~1.1 GB) and `OLLAMA_NUM_CTX=4096`.
+  - **One model in RAM:** Set `OLLAMA_DEEP_MODEL` equal to `OLLAMA_MODEL` (`qwen2.5:3b`) on Pi 5 so Ollama never swaps two models in and out of memory.
+- **Keep `chromadb` off the Pi:** `chromadb` is listed in `requirements.txt` (unused right now) and pulls heavy ARM64 deps (`onnxruntime`, etc.). Keep it skipped on Pi 5 and use SQLite (`ori_memory.db`) unless needed later.
+- **SD card wear & power-loss safety:** Heartbeat ticks write to `ori_memory.db` and Archive writes `database.json`. Enable SQLite `WAL` mode (`journal_mode=WAL`), keep nightly backups, and prefer a USB 3.0 NVMe SSD over microSD for 24/7 writes.
+- **Windows-only paths & Blender:** Leave `BLENDER_PATH` empty on Pi 5 and keep Blender 3D relic generation on the PC (sync finished `.glb`s via `Bossman-samb/astral-archive` + `copy-to-pi.bat`). On Pi 5, Archive runs `athenaeum/server.js` (Node), not `server.ps1`.
+- **Timing & offline LAN:** Keep `TICK_INTERVAL_SECONDS=90` (or `120`) and `OLLAMA_TIMEOUT_SECONDS=300` so ticks don't pile up. Vendor Three.js locally in `athenaeum/public/vendor/` so the 3D Relic Rotator works offline on LAN, and use a static router IP (or `raspberrypi.local`) + Tailscale/Cloudflare Tunnel for HTTPS/PWA on your phone.
 
 ---
 
