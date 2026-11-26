@@ -126,6 +126,26 @@ Both projects support the Raspberry Pi 5, and `ASTRAL_ARCHIVE_URL` in Ori's `.en
 - **Blender Workshop:** Blender relic/sprite generation stays on the PC; finished 2.5D sprite sheets or lightweight `.glb`s sync to the Pi 5 via `Bossman-samb/astral-archive` and `copy-to-pi.bat`. On Pi 5, leave `BLENDER_PATH` empty and run `athenaeum/server.js` (Node), not `server.ps1`.
 - **Timing & offline LAN:** Keep `TICK_INTERVAL_SECONDS=90` (or `120`) and `OLLAMA_TIMEOUT_SECONDS=300` so ticks don't pile up. Vendor Three.js locally in `athenaeum/public/vendor/` so the 3D Relic Rotator works offline on LAN, and use a static router IP (or `raspberrypi.local`) + Tailscale/Cloudflare Tunnel for HTTPS/PWA on your phone.
 
+### Pi 5 optimization instructions & recommendations
+1. **Boot from USB 3.0 NVMe SSD (or protect the microSD):**
+   - Best option: boot Raspberry Pi OS (64-bit) from a USB 3.0 NVMe SSD (or PCIe HAT NVMe) so 90s SQLite ticks and `database.json` saves don't wear out a microSD card.
+   - If staying on microSD: install `log2ram` (keeps `/var/log` in RAM), mount `/tmp` as `tmpfs`, and add `noatime` in `/etc/fstab` to cut unnecessary disk writes.
+2. **Keep SQLite fast & crash-safe:**
+   - Enable WAL mode on `ori_memory.db` once:
+     `sqlite3 ori_memory.db "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;"`
+   - Run `VACUUM` + nightly off-device backup (e.g. `cron` copying `ori_memory.db` and `database.json` to a backup folder or private Git repo).
+3. **Exclude heavy/unused files when syncing to Pi 5:**
+   - **Ori:** skip `Ori.blend`, `Ori.blend1` (~23.4 MB), `Ori.glb` (~4.46 MB), `relic_archive/`, and `__pycache__/`; skip `chromadb` from `requirements.txt` (unused, heavy ARM64 deps).
+   - **Archive:** `copy-to-pi.bat` already skips `archive/` and `Oris relic refrences/` (~2.39 GB), syncing only ~1.6 MB of active 2D/2.5D assets.
+4. **Ollama RAM & CPU tuning (`/etc/systemd/system/ollama.service.d/override.conf`):**
+   - Set `OLLAMA_MAX_LOADED_MODELS=1` and `OLLAMA_NUM_PARALLEL=1` so Ollama never keeps two models in RAM or runs parallel inference on 4 cores.
+   - Use **Q4_K_M** quantized models (`qwen2.5:3b` on 8 GB Pi, `qwen2.5:1.5b` on 4 GB Pi) and keep `OLLAMA_KEEP_ALIVE=30m` + `OLLAMA_NUM_CTX=8192` (or `4096` on 4 GB) constant so the model isn't reloaded between ticks.
+   - Enable `zram` (`rpi-zram` or `zram-tools`) as compressed RAM safety net; avoid heavy swap on microSD.
+5. **Trim background bloat & lock thermals:**
+   - Use **Raspberry Pi OS Lite (64-bit)** (headless, no desktop GUI) if the Pi is a dedicated appliance — saves ~400–600 MB RAM.
+   - Disable unused services (`bluetooth`, `cups`, `avahi` only if not using `.local`) and set a static IP or mDNS (`raspberrypi.local`).
+   - Run **Active Cooler + 27W PSU** and monitor temps with `vcgencmd measure_temp` (stay under ~75–80 °C during ticks).
+
 ---
 
 ## 4. Build phases
